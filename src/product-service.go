@@ -2,11 +2,17 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
+	"os"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // product represents a product as defined by the Product schema in api.yaml.
@@ -76,12 +82,36 @@ func (s *productStore) update(p product) bool {
 	return true
 }
 
+// RED metrics (Rate, Errors, Duration), served at /metrics for Prometheus.
+// route is the route template ("/products/:productId"), not the raw path,
+// so 1000 product IDs share one time series instead of creating 1000.
+var (
+	requestsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "http_requests_total",
+		Help: "Requests handled, by method, route, and status code.",
+	}, []string{"method", "route", "status"})
+
+	errorsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "http_request_errors_total",
+		Help: "Requests that returned a non-2xx status code.",
+	}, []string{"method", "route", "status"})
+
+	// Buckets from 50µs to about 1.6s: the handlers take microseconds, so the
+	// default buckets (starting at 5ms) would put every request in the first one.
+	requestDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "http_request_duration_seconds",
+		Help:    "Time to handle a request, in seconds.",
+		Buckets: prometheus.ExponentialBuckets(0.00005, 2, 16),
+	}, []string{"method", "route"})
+)
+
 // main registers the product routes and starts the server on port 8080.
 // Every request runs Logger and Recovery first, then simulateError, then its handler.
 func main() {
-	router := gin.New()                                            // empty router, no default middleware
-	router.Use(gin.Logger(), gin.CustomRecovery(recoverWithError)) // global middleware
-	products := router.Group("/products", simulateError)           // group middleware
+	router := gin.New() // empty router, no default middleware
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
+	router.Use(recordMetrics, logRequest, gin.CustomRecovery(recoverWithError)) // global middleware
+	products := router.Group("/products", simulateError)                        // group middleware
 	products.GET("/:productId", getProduct)
 	products.POST("/:productId/details", addProductDetails)
 	router.Run(":8080")
@@ -179,6 +209,49 @@ func simulateError(c *gin.Context) {
 		return
 	}
 	c.Next()
+}
+
+// recordMetrics counts and times every request. It runs outside Recovery,
+// so it still sees the final status when a panic is turned into a 500.
+func recordMetrics(c *gin.Context) {
+	start := time.Now()
+	c.Next()
+
+	route := routeLabel(c)
+	code := c.Writer.Status()
+	status := strconv.Itoa(code)
+
+	requestsTotal.WithLabelValues(c.Request.Method, route, status).Inc()
+	if code < 200 || code >= 300 {
+		errorsTotal.WithLabelValues(c.Request.Method, route, status).Inc()
+	}
+	requestDuration.WithLabelValues(c.Request.Method, route).Observe(time.Since(start).Seconds())
+}
+
+// logger writes one JSON object per line to stdout.
+var logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
+// logRequest writes one JSON log line per request with the same RED data
+// as the metrics, so it can be searched after the fact.
+func logRequest(c *gin.Context) {
+	start := time.Now()
+	c.Next()
+
+	logger.Info("request",
+		"method", c.Request.Method,
+		"endpoint", routeLabel(c),
+		"path", c.Request.URL.Path,
+		"status", c.Writer.Status(),
+		"duration_ms", float64(time.Since(start).Microseconds())/1000,
+	)
+}
+
+// routeLabel returns the matched route template, e.g. "/products/:productId".
+func routeLabel(c *gin.Context) string {
+	if route := c.FullPath(); route != "" {
+		return route
+	}
+	return "unmatched" // no route matched
 }
 
 // recoverWithError turns a panic in any handler into a 500 in the Error schema.

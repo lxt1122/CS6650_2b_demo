@@ -1,0 +1,57 @@
+# Product API + Prometheus + Grafana + Locust, all local.
+#
+#   docker compose up --build --scale worker=4
+#
+#   App         http://localhost:8080
+#   Prometheus  http://localhost:9090   (Status > Targets shows the scrape)
+#   Grafana     http://localhost:3000   (dashboard: "Product API - RED")
+#   Locust      http://localhost:8089
+
+services:
+  app:
+    build: ../src
+    ports:
+      - "8080:8080"
+    # Same CPU as the Fargate task in Part IV, so the load test can saturate it.
+    cpus: "0.25"
+
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - app
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    environment:
+      # Local only: open the dashboard without logging in.
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+
+  master:
+    image: locustio/locust
+    ports:
+      - "8089:8089"
+    volumes:
+      - ../locust:/mnt/locust
+    command: -f /mnt/locust/${LOCUSTFILE:-locustfile.py} --master -H http://app:8080
+    depends_on:
+      - app
+
+  worker:
+    image: locustio/locust
+    volumes:
+      - ../locust:/mnt/locust
+    command: -f /mnt/locust/${LOCUSTFILE:-locustfile.py} --worker --master-host master
+    depends_on:
+      - master
