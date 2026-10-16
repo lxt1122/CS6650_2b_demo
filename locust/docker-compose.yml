@@ -1,0 +1,24 @@
+# Locust master/worker that load test the Product API deployed on ECS, based on
+# https://docs.locust.io/en/stable/running-in-docker.html
+#
+#   TARGET_HOST=http://<ECS public IP>:8080 docker compose up --scale worker=4
+#   LOCUSTFILE=locustfile_fast.py TARGET_HOST=... docker compose up --scale worker=4
+#
+# Then open http://localhost:8089
+
+services:
+  master:
+    image: locustio/locust
+    ports:
+      - "8089:8089"
+    volumes:
+      - ./:/mnt/locust
+    command: -f /mnt/locust/${LOCUSTFILE:-locustfile.py} --master -H ${TARGET_HOST:?set TARGET_HOST to http://<ECS public IP>:8080}
+
+  worker:
+    image: locustio/locust
+    volumes:
+      - ./:/mnt/locust
+    command: -f /mnt/locust/${LOCUSTFILE:-locustfile.py} --worker --master-host master
+    depends_on:
+      - master
