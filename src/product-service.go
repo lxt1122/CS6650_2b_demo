@@ -106,7 +106,7 @@ var (
 )
 
 // main registers the product routes and starts the server on port 8080.
-// Every request runs Logger and Recovery first, then simulateError, then its handler.
+// Every request runs recordMetrics, logRequest, and Recovery first, then simulateError, then its handler.
 func main() {
 	router := gin.New() // empty router, no default middleware
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
@@ -189,6 +189,8 @@ func addProductDetails(c *gin.Context) {
 }
 
 // parseProductID converts the path parameter to an int32 that is at least 1.
+// The caller picks the status for an invalid ID: GET returns 404 (api.yaml
+// has no 400 for GET), POST returns 400.
 func parseProductID(raw string) (int32, bool) {
 	id, err := strconv.ParseInt(raw, 10, 32)
 	if err != nil || id < 1 {
