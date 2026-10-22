@@ -57,7 +57,7 @@ paths:
                   search_time:
                     type: string
                     minLength: 2
-                    example: "1.2s"
+                    example: "1.2s"	    
         '400':
           description: Invalid input data
           content:
