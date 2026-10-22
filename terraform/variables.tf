@@ -25,6 +25,18 @@ variable "ecs_count" {
   default = 1
 }
 
+# Fargate task size. 256 CPU units = 0.25 vCPU.
+# Fargate needs at least 1024 MiB of memory when cpu is 512.
+variable "cpu" {
+  type    = string
+  default = "256"
+}
+
+variable "memory" {
+  type    = string
+  default = "512"
+}
+
 # How long to keep logs
 variable "log_retention_days" {
   type    = number

@@ -70,8 +70,8 @@ Valid body:
 
 To run every case, import `postman/hw5-product-api.postman_collection.json`, set `baseUrl`, and click **Run collection**. All 29 tests pass with `go run` and with Docker:
 
-![Postman, go run](screenshots/p2-postman-go-run.png)
-![Postman, Docker](screenshots/p2-postman-docker.png)
+![Postman, go run](screenshots/hw5/p2-postman-go-run.png)
+![Postman, Docker](screenshots/hw5/p2-postman-docker.png)
 
 ## Load testing
 
@@ -93,16 +93,16 @@ Each user sends GET and POST in a 9:1 ratio, since a store is read-heavy. Produc
 - **HttpUser vs FastHttpUser:** the results are the same because the server is the bottleneck. FastHttpUser only helps when the Locust client itself is the limit.
 - **Read-heavy tradeoff:** map lookups are O(1), and the RWMutex lets GETs run in parallel. GET and POST latencies are equal under load, so the 10% writes cause no lock contention.
 
-![Baseline charts](screenshots/p4-1user-charts.png)
-![Baseline stats](screenshots/p4-1user-stats.png)
-![HttpUser charts](screenshots/p4-500users-http-charts.png)
-![HttpUser stats](screenshots/p4-500users-http-stats.png)
-![FastHttpUser charts](screenshots/p4-500users-fast-charts.png)
-![FastHttpUser stats](screenshots/p4-500users-fast-stats.png)
+![Baseline charts](screenshots/hw5/p4-1user-charts.png)
+![Baseline stats](screenshots/hw5/p4-1user-stats.png)
+![HttpUser charts](screenshots/hw5/p4-500users-http-charts.png)
+![HttpUser stats](screenshots/hw5/p4-500users-http-stats.png)
+![FastHttpUser charts](screenshots/hw5/p4-500users-fast-charts.png)
+![FastHttpUser stats](screenshots/hw5/p4-500users-fast-stats.png)
 
 ECS CPU (CloudWatch, UTC). The spikes at 03:31 and 03:54 are the HttpUser and FastHttpUser runs:
 
-![ECS CPU](screenshots/p4-500users-both-ecs-cpu.png)
+![ECS CPU](screenshots/hw5/p4-500users-both-ecs-cpu.png)
 
 ## Observability
 
@@ -113,7 +113,7 @@ docker compose up --build --scale worker=4
 
 This starts the app on :8080, Prometheus on :9090, Grafana on :3000 (dashboard "Product API - RED") and Locust on :8089. The server exposes RED metrics at `/metrics` and logs one JSON line per request. The stack runs locally, so this is the Part IV test rerun against the local app, which is capped at 0.25 CPU to match Fargate (200 users, 3 minutes).
 
-![Grafana RED dashboard](screenshots/p5-grafana-red.png)
+![Grafana RED dashboard](screenshots/hw5/p5-grafana-red.png)
 
 | Signal | Loaded | Idle |
 |---|---|---|
@@ -123,7 +123,7 @@ This starts the app on :8080, Prometheus on :9090, Grafana on :3000 (dashboard "
 
 Grafana measures time inside the handler, while Locust measures the whole request: p50 16 ms, p95 77 ms. The gap is time spent waiting for the CPU-capped container, which happens before a request reaches Gin.
 
-![Locust stats](screenshots/p5-locust-stats.png)
+![Locust stats](screenshots/hw5/p5-locust-stats.png)
 
 Request log excerpt from the same run:
 

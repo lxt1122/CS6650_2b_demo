@@ -1,0 +1,30 @@
+# HW6: Prometheus + Grafana locally, scraping the Product API deployed on ECS.
+# (docker-compose.yml is the HW5 stack, which runs the app locally instead.)
+# Set the IP in prometheus-hw6.yml first, then:
+#
+#   docker compose -f docker-compose.hw6.yml up
+#
+#   Prometheus  http://localhost:9090   (Status > Targets shows the scrape)
+#   Grafana     http://localhost:3000   (dashboard: "Product API - RED")
+
+services:
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus-hw6.yml:/etc/prometheus/prometheus.yml:ro
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    environment:
+      # Local only: open the dashboard without logging in.
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus

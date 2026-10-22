@@ -1,0 +1,11 @@
+# HW6: scrape the Product API running on ECS every 5 seconds.
+# (prometheus.yml is the HW5 config, which scrapes the local app.)
+# Replace ECS_PUBLIC_IP with the task's public IP after terraform apply,
+# then restart Prometheus. The IP changes whenever the task is replaced.
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: product-service
+    static_configs:
+      - targets: ["ECS_PUBLIC_IP:8080"]
