@@ -7,6 +7,10 @@
 #   Prometheus  http://localhost:9090   (Status > Targets shows the scrape)
 #   Grafana     http://localhost:3000   (dashboard: "Product API - RED")
 
+# Own project name, so these containers do not share names with the HW5
+# stack (docker-compose.yml), which would otherwise also be "observability".
+name: hw6-observability
+
 services:
   prometheus:
     image: prom/prometheus

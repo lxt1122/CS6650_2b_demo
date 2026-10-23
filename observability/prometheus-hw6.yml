@@ -8,4 +8,4 @@ global:
 scrape_configs:
   - job_name: product-service
     static_configs:
-      - targets: ["ECS_PUBLIC_IP:8080"]
+      - targets: ["44.248.168.100:8080"]
