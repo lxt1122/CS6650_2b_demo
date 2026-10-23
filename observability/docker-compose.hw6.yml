@@ -1,8 +1,9 @@
 # HW6: Prometheus + Grafana locally, scraping the Product API deployed on ECS.
 # (docker-compose.yml is the HW5 stack, which runs the app locally instead.)
-# Set the IP in prometheus-hw6.yml first, then:
+# Start the stack, then keep the ECS task list current in another terminal:
 #
 #   docker compose -f docker-compose.hw6.yml up
+#   ./hw6-ecs-targets.sh
 #
 #   Prometheus  http://localhost:9090   (Status > Targets shows the scrape)
 #   Grafana     http://localhost:3000   (dashboard: "Product API - RED")
@@ -18,6 +19,9 @@ services:
       - "9090:9090"
     volumes:
       - ./prometheus-hw6.yml:/etc/prometheus/prometheus.yml:ro
+      # A directory, not a single file, so Prometheus sees the file the
+      # script replaces each time it refreshes.
+      - ./targets:/etc/prometheus/targets:ro
 
   grafana:
     image: grafana/grafana

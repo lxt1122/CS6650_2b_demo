@@ -3,6 +3,9 @@
 **.tfstate.*
 **/.terraform/
 
+# HW6 Prometheus targets: current ECS task IPs, written by hw6-ecs-targets.sh
+observability/targets/
+
 # Python cache
 __pycache__/
 *.pyc

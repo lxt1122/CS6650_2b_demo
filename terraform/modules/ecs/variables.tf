@@ -44,6 +44,11 @@ variable "ecs_count" {
   description = "Desired Fargate task count"
 }
 
+variable "target_group_arn" {
+  type        = string
+  description = "ALB target group to register tasks in"
+}
+
 variable "region" {
   type        = string
   description = "AWS region (for awslogs driver)"

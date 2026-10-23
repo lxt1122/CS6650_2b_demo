@@ -1,6 +1,13 @@
 # ECS Cluster
 resource "aws_ecs_cluster" "this" {
   name = "${var.service_name}-cluster"
+
+  # Enhanced Container Insights publishes per-task CPU (TaskCpuUtilization)
+  # and DesiredTaskCount / RunningTaskCount for the CloudWatch dashboard.
+  setting {
+    name  = "containerInsights"
+    value = "enhanced"
+  }
 }
 
 # Task Definition
@@ -46,5 +53,17 @@ resource "aws_ecs_service" "this" {
     subnets         = var.subnet_ids
     security_groups = var.security_group_ids
     assign_public_ip = true
+  }
+
+  # Register each task's container port in the ALB target group
+  load_balancer {
+    target_group_arn = var.target_group_arn
+    container_name   = "${var.service_name}-container"
+    container_port   = var.container_port
+  }
+
+  # Auto scaling changes the task count, so terraform apply must not reset it
+  lifecycle {
+    ignore_changes = [desired_count]
   }
 }

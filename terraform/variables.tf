@@ -20,9 +20,10 @@ variable "container_port" {
   default = 8080
 }
 
+# Initial task count. After the first apply, auto scaling sets the count.
 variable "ecs_count" {
   type    = number
-  default = 1
+  default = 2
 }
 
 # Fargate task size. 256 CPU units = 0.25 vCPU.
@@ -35,6 +36,32 @@ variable "cpu" {
 variable "memory" {
   type    = string
   default = "512"
+}
+
+# Auto scaling: keep average CPU near cpu_target with 2–4 tasks
+variable "min_capacity" {
+  type    = number
+  default = 2
+}
+
+variable "max_capacity" {
+  type    = number
+  default = 4
+}
+
+variable "cpu_target" {
+  type    = number
+  default = 70
+}
+
+variable "scale_out_cooldown" {
+  type    = number
+  default = 300
+}
+
+variable "scale_in_cooldown" {
+  type    = number
+  default = 300
 }
 
 # How long to keep logs

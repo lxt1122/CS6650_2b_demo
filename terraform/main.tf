@@ -1,8 +1,17 @@
-# Wire together four focused modules: network, ecr, logging, ecs.
+# Wire together seven focused modules: network, ecr, logging, alb, ecs,
+# autoscaling, dashboard.
 
 module "network" {
   source         = "./modules/network"
   service_name   = var.service_name
+  container_port = var.container_port
+}
+
+module "alb" {
+  source         = "./modules/alb"
+  service_name   = var.service_name
+  vpc_id         = module.network.vpc_id
+  subnet_ids     = module.network.subnet_ids
   container_port = var.container_port
 }
 
@@ -35,7 +44,31 @@ module "ecs" {
   ecs_count          = var.ecs_count
   cpu                = var.cpu
   memory             = var.memory
+  target_group_arn   = module.alb.target_group_arn
   region             = var.aws_region
+
+  # The target group must be attached to the ALB (via the listener)
+  # before the service can register tasks in it.
+  depends_on = [module.alb]
+}
+
+module "autoscaling" {
+  source             = "./modules/autoscaling"
+  cluster_name       = module.ecs.cluster_name
+  service_name       = module.ecs.service_name
+  min_capacity       = var.min_capacity
+  max_capacity       = var.max_capacity
+  cpu_target         = var.cpu_target
+  scale_out_cooldown = var.scale_out_cooldown
+  scale_in_cooldown  = var.scale_in_cooldown
+}
+
+module "dashboard" {
+  source         = "./modules/dashboard"
+  service_name   = module.ecs.service_name
+  cluster_name   = module.ecs.cluster_name
+  alb_arn_suffix = module.alb.arn_suffix
+  region         = var.aws_region
 }
 
 
